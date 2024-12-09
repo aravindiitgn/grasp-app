@@ -1,7 +1,7 @@
 # grasp-plan-multiobject
 
 
-# **Workspace Volume Data Processing Script - dataset_get.py**
+# **Workspace Volume Data Processing Script - dataset_gen.py**
 
 
 This script processes three CSV files to generate a **final CSV file** containing object details, grasping lengths, and workspace volumes after one and two grasps.

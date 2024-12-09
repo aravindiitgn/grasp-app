@@ -99,7 +99,7 @@ for index in range(1000):
 
 # Save results to CSV
 df_results = pd.DataFrame(results)
-csv_path = '../data/workspace_volumes1.csv'
+csv_path = '../data/workspace_volumes_xml_1.csv'
 df_results.to_csv(csv_path, index=False)
 
 print(f"CSV file saved at: {csv_path}")

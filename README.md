@@ -1,11 +1,9 @@
 # grasp-plan-multiobject
 
 
-# **Workspace Volume Data Processing Script**
+# **Workspace Volume Data Processing Script - dataset_get.py**
 
 
-
-## **Overview**
 This script processes three CSV files to generate a **final CSV file** containing object details, grasping lengths, and workspace volumes after one and two grasps.
 
 ---
@@ -40,3 +38,4 @@ This script processes three CSV files to generate a **final CSV file** containin
 | **Object 2 Shape (Cuboid, Sphere, Cylinder)** | One-hot encoding of the shape of Object 2 (e.g., [0, 1, 0] for Sphere) |
 | **Remaining Workspace Volume after first grasp** | Extracted from **workspace_volumes_xml_1.csv** |
 | **Remaining Workspace Volume after both grasps** | Extracted from **workspace_volumes_xml_2.csv** |
+

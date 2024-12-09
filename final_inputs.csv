@@ -1,0 +1,6 @@
+Object 1 Volume,Object 1 Grasping Length,Object 2 Volume,Object 2 Grasping Length,Object1_Shape_Cuboid,Object1_Shape_Cylinder,Object1_Shape_Sphere,Object2_Shape_Cuboid,Object2_Shape_Cylinder,Object2_Shape_Sphere,Grasping_Order_0,Grasping_Order_1
+20,12,15,10,True,False,False,False,False,True,False,True
+25,15,10,8,False,False,True,False,True,False,True,False
+15,10,20,14,False,True,False,True,False,False,False,True
+30,18,12,9,True,False,False,False,False,True,True,False
+18,14,22,12,False,False,True,False,True,False,False,True

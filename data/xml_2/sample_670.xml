@@ -27,7 +27,7 @@
     </body>
     
     <body name="cube" pos="-0.04 0.055 0.21" euler="0 0 0">
-            <geom name="box_geom" type="box" size="5.865 0.131 5.865" rgba="0 1.5 0 1" friction="1 1 1" density="10000" contype="1" conaffinity="1" solref="0.001 0.8" solimp="1 1 0.035" />
+            <geom name="box_geom" type="cylinder" size="0.024 0.059" rgba="0 1.5 0 1" friction="1 1 1" density="10000" contype="1" conaffinity="1" solref="0.001 0.8" solimp="1 1 0.035" />
             
     </body>
     

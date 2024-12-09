@@ -34,8 +34,9 @@ This script processes three CSV files to generate a **final CSV file** containin
 |--------------------------------------------|------------------------------------------|
 | **Object 1 Volume**                        | Volume of Object 1 (based on dimensions) |
 | **Object 1 Grasping Length**               | 2x Y-dimension (for Cuboid/Cylinder)    |
+| **Object 1 Shape (Cuboid, Sphere, Cylinder)** | One-hot encoding of the shape of Object 1 (e.g., [1, 0, 0] for Cuboid) |
 | **Object 2 Volume**                        | Volume of Object 2                      |
 | **Object 2 Grasping Length**               | 2x Y-dimension (for Cuboid/Cylinder)    |
+| **Object 2 Shape (Cuboid, Sphere, Cylinder)** | One-hot encoding of the shape of Object 2 (e.g., [0, 1, 0] for Sphere) |
 | **Remaining Workspace Volume after first grasp** | Extracted from **workspace_volumes_xml_1.csv** |
 | **Remaining Workspace Volume after both grasps** | Extracted from **workspace_volumes_xml_2.csv** |
-

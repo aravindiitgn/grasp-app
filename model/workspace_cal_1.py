@@ -251,34 +251,34 @@ results = []
 
 
 if __name__ == "__main__":
-        for index in range(1000):
-            xml_path = os.path.join(xml_directory, f'sample{index}.xml')
-            if os.path.exists(xml_path):
-                    print(f"Processing {xml_path}...")
-                    ik_solver = OnlyPosIK(xml_path)
+        index=0
+        xml_path = os.path.join(xml_directory, f'sample{index}.xml')
+        if os.path.exists(xml_path):
+                print(f"Processing {xml_path}...")
+                ik_solver = OnlyPosIK(xml_path)
 
-                    fixed_goals = [np.array([-0.055, -0.020, 0.12]), np.array([-0.055, -0.065, 0.12])]
-                    fixed_site_names = ["tip2", "tip3"]
+                fixed_goals = [np.array([-0.055, -0.020, 0.12]), np.array([-0.055, -0.065, 0.12])]
+                fixed_site_names = ["tip2", "tip3"]
 
-                    index_finger_joint_ranges = [
-                        (-0.314, 2.23), (-1.047, 0.12), (-0.506, 1.885), (-0.366, 2.042)
-                    ]
-                    thumb_finger_joint_ranges = [
-                        (0.349, 2.094), (-0.47, 2.443), (-1.2,1.9), (-1.34, 1.88)
-                    ]
+                index_finger_joint_ranges = [
+                    (-0.314, 2.23), (-1.047, 0.12), (-0.506, 1.885), (-0.366, 2.042)
+                ]
+                thumb_finger_joint_ranges = [
+                    (0.349, 2.094), (-0.47, 2.443), (-1.2,1.9), (-1.34, 1.88)
+                ]
 
-                    # Get the workspace positions for both fingers
-                    workspacei_positions, workspacet_positions = ik_solver.find_workspace_in_angles(
-                        fixed_goals, fixed_site_names, index_finger_joint_ranges, thumb_finger_joint_ranges
-                    )
-                    
-                    # Pass both workspaces to the visualization method
-                    ik_solver.visualize_convex_hull(workspacei_positions, workspacet_positions)
+                # Get the workspace positions for both fingers
+                workspacei_positions, workspacet_positions = ik_solver.find_workspace_in_angles(
+                    fixed_goals, fixed_site_names, index_finger_joint_ranges, thumb_finger_joint_ranges
+                )
+                
+                # Pass both workspaces to the visualization method
+                ik_solver.visualize_convex_hull(workspacei_positions, workspacet_positions)
 
-                    # Render simulation
-                    while True:
-                        ik_solver.viewer.render()
-                        ik_solver.sim.step()
+                # Render simulation
+                while True:
+                    ik_solver.viewer.render()
+                    ik_solver.sim.step()
         df_results = pd.DataFrame(results)
         csv_path = '../data/workspace_volumes_xml_1.csv'
         df_results.to_csv(csv_path, index=False)

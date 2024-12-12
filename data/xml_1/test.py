@@ -246,7 +246,7 @@ class OnlyPosIK:
 
 
 if __name__ == "__main__":
-    xml_path = "sample_0.xml"
+    xml_path = "sample_3.xml"
     ik_solver = OnlyPosIK(xml_path)
 
     fixed_goals = [np.array([-0.055, -0.020, 0.12]), np.array([-0.055, -0.065, 0.12])]

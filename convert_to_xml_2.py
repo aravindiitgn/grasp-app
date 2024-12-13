@@ -15,19 +15,23 @@ for index, row in df.iterrows():
     obj1_shape = eval(row["Object 1 Shape"])  # Convert string back to list
     obj1_dimensions = eval(row["Obj 1 Dimensions"])  # Convert string back to list
 
-    # Determine object 1 type and size
+    # Determine object 1 type, size, and euler
     if obj1_shape == [1, 0, 0]:  # Cuboid
         obj1_type = "box"
         obj1_size = f'{obj1_dimensions[0]} {obj1_dimensions[1]} {obj1_dimensions[2]}'
+        obj1_euler = "0 1.57 0"  # Euler for box
     elif obj1_shape == [0, 1, 0]:  # Sphere
         obj1_type = "sphere"
         obj1_size = f'{obj1_dimensions[0]}'
+        obj1_euler = "0 0 0"  # Euler for sphere remains the same
     elif obj1_shape == [0, 0, 1]:  # Cylinder
         obj1_type = "cylinder"
         obj1_size = f'{obj1_dimensions[0]} {obj1_dimensions[1]}'
+        obj1_euler = "1.57 0 0"  # Euler for cylinder
 
     # Update <body name="cube"> with Object 1 data
     for body in root.findall(".//body[@name='cube']"):
+        body.set('euler', obj1_euler)  # Set the euler attribute
         geom = body.find(".//geom[@name='box_geom']")
         if geom is not None:
             geom.set('type', obj1_type)
@@ -37,19 +41,23 @@ for index, row in df.iterrows():
     obj2_shape = eval(row["Object 2 Shape"])  # Convert string back to list
     obj2_dimensions = eval(row["Obj 2 Dimensions"])  # Convert string back to list
 
-    # Determine object 2 type and size
+    # Determine object 2 type, size, and euler
     if obj2_shape == [1, 0, 0]:  # Cuboid
         obj2_type = "box"
         obj2_size = f'{obj2_dimensions[0]} {obj2_dimensions[1]} {obj2_dimensions[2]}'
+        obj2_euler = "0 1.57 0"  # Euler for box
     elif obj2_shape == [0, 1, 0]:  # Sphere
         obj2_type = "sphere"
         obj2_size = f'{obj2_dimensions[0]}'
+        obj2_euler = "0 0 0"  # Euler for sphere remains the same
     elif obj2_shape == [0, 0, 1]:  # Cylinder
         obj2_type = "cylinder"
         obj2_size = f'{obj2_dimensions[0]} {obj2_dimensions[1]}'
+        obj2_euler = "1.57 0 0"  # Euler for cylinder
 
     # Update <body name="cube1"> with Object 2 data
     for body in root.findall(".//body[@name='cube1']"):
+        body.set('euler', obj2_euler)  # Set the euler attribute
         geom = body.find(".//geom[@name='box_geom']")
         if geom is not None:
             geom.set('type', obj2_type)

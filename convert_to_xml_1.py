@@ -19,15 +19,22 @@ for index, row in df.iterrows():
     if obj1_shape == [1, 0, 0]:  # Cuboid
         obj1_type = "box"
         obj1_size = f'{obj1_dimensions[0]} {obj1_dimensions[1]} {obj1_dimensions[2]}'
+        obj1_euler = "0 1.57 0"  # Change euler for cuboid
     elif obj1_shape == [0, 1, 0]:  # Sphere
         obj1_type = "sphere"
         obj1_size = f'{obj1_dimensions[0]}'
+        obj1_euler = "0 0 0"  # Keep euler same for sphere
     elif obj1_shape == [0, 0, 1]:  # Cylinder
         obj1_type = "cylinder"
         obj1_size = f'{obj1_dimensions[0]} {obj1_dimensions[1]}'
+        obj1_euler = "1.57 0 0"  # Change euler for cylinder
 
-    # Update the specific <body name="cube"> with the <geom> attributes
+    # Update the specific <body name="cube"> with the <geom> attributes and euler in <body> tag
     for body in root.findall(".//body[@name='cube']"):
+        # Update euler attribute in <body> tag
+        body.set('euler', obj1_euler)
+
+        # Update the <geom> attributes
         geom = body.find(".//geom[@name='box_geom']")
         if geom is not None:
             geom.set('type', obj1_type)

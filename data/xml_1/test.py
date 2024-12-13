@@ -81,10 +81,10 @@ class OnlyPosIK:
             for joint2i_angle in np.linspace(joint_ranges1[1][0], joint_ranges1[1][1], 4):
                 for joint3i_angle in np.linspace(joint_ranges1[2][0], joint_ranges1[2][1], 4):
                     for joint4i_angle in np.linspace(joint_ranges1[3][0], joint_ranges1[3][1], 4):
-                        for joint1t_angle in np.linspace(joint_ranges2[0][0], joint_ranges2[0][1], 4):
-                            for joint2t_angle in np.linspace(joint_ranges2[1][0], joint_ranges2[1][1], 4):
-                                for joint3t_angle in np.linspace(joint_ranges2[2][0], joint_ranges2[2][1], 4):
-                                    for joint4t_angle in np.linspace(joint_ranges2[3][0], joint_ranges2[3][1], 4):
+                        for joint1t_angle in np.linspace(joint_ranges2[0][0], joint_ranges2[0][1], 3):
+                            for joint2t_angle in np.linspace(joint_ranges2[1][0], joint_ranges2[1][1], 3):
+                                for joint3t_angle in np.linspace(joint_ranges2[2][0], joint_ranges2[2][1], 3):
+                                    for joint4t_angle in np.linspace(joint_ranges2[3][0], joint_ranges2[3][1], 3):
                                         # Set the joint angles for the third finger
                                         index_finger_angles = np.array([joint1i_angle, joint2i_angle, joint3i_angle, joint4i_angle])
                                         thumb_finger_angles = np.array([joint1t_angle, joint2t_angle, joint3t_angle, joint4t_angle])
@@ -116,72 +116,99 @@ class OnlyPosIK:
         if workspacei_positions is None or workspacet_positions is None or len(workspacei_positions) == 0 or len(workspacet_positions) == 0:
             raise ValueError("Workspace positions are empty. Ensure that the input is not empty.")
         
-        # Ensure the arrays are 2D for np.unique to work correctly
+        # Process input workspace positions
         workspacei = np.asarray(workspacei_positions)
-        if workspacei.ndim == 1:
-            workspacei = workspacei.reshape(-1, 1)
-        
         workspacet = np.asarray(workspacet_positions)
-        if workspacet.ndim == 1:
-            workspacet = workspacet.reshape(-1, 1)
-        
-        # Extract unique points for each workspace
         workspacei_points = np.unique(workspacei, axis=0)
         workspacet_points = np.unique(workspacet, axis=0)
 
-        # Check for sufficient points for ConvexHull
-        if len(workspacei_points) < 4:
-            print("Not enough unique points for ConvexHull. At least 4 points are required for the index finger workspace.")
+        if len(workspacei_points) < 4 or len(workspacet_points) < 4:
+            print("Not enough unique points for ConvexHull in one or both workspaces.")
             return
-        if len(workspacet_points) < 4:
-            print("Not enough unique points for ConvexHull. At least 4 points are required for the thumb workspace.")
-            return
-        
-        # Add slight noise to avoid coplanarity issues
+
+        # Add noise to avoid coplanarity issues
         workspacei_points += np.random.normal(scale=1e-5, size=workspacei_points.shape)
         workspacet_points += np.random.normal(scale=1e-5, size=workspacet_points.shape)
         combined_points = np.vstack((workspacei_points, workspacet_points))
-        
-        # Try constructing the convex hull
+
         try:
             hull = ConvexHull(combined_points)
             workspace_volume = hull.volume
             print(f"Combined Workspace Volume: {workspace_volume} cubic units")
         except Exception as e:
             print("ConvexHull calculation failed:", e)
-            workspace_volume = None
             return
-        
-        # Get object geometry
-        object_geom_id = self.sim.model.geom_name2id('box_geom') 
-        object_size = self.sim.model.geom_size[object_geom_id]  
+
+        # Determine the object geometry
+        object_geom_id = self.sim.model.geom_name2id('box_geom')  # Replace with actual object name
+        geom_type = self.sim.model.geom_type[object_geom_id]  # Geometry type
+        geom_size = self.sim.model.geom_size[object_geom_id]  # Size parameters
         object_position = self.sim.data.body_xpos[object_geom_id]
-        print(object_position)
-        print(object_size)
+        geom_name = self.sim.model.geom_id2name(object_geom_id)
 
-        # Calculate the corner points of the box (8 corners)
-        offsets = np.array([
-            [-1, -1, -1],
-            [-1, -1,  1],
-            [-1,  1, -1],
-            [-1,  1,  1],
-            [ 1, -1, -1],
-            [ 1, -1,  1],
-            [ 1,  1, -1],
-            [ 1,  1,  1]
-        ]) * object_size  # Scale by the half extents
-        box_corners = offsets + object_position  # Translate to object position
+        print(f"Geometry Name: {geom_name}, Geometry Type: {geom_type}, Size: {geom_size}")
 
-        #  Create the convex hull for the object
-        object_hull = ConvexHull(box_corners)
-        object_volume = object_hull.volume
-        print(f"Object Convex Hull Volume: {object_volume} cubic units")
+        # Generate points for different object types
+        if geom_type == 2:  # Sphere
+            radius = geom_size[0]
+            num_samples = 1000
+            phi = np.random.uniform(0, 2 * np.pi, num_samples)
+            costheta = np.random.uniform(-1, 1, num_samples)
+            u = np.random.uniform(0, 1, num_samples)
+            theta = np.arccos(costheta)
+            r = radius * u ** (1/3)
+            x = r * np.sin(theta) * np.cos(phi)
+            y = r * np.sin(theta) * np.sin(phi)
+            z = r * np.cos(theta)
+            object_points = np.vstack((x, y, z)).T + object_position
+        elif geom_type == 6:  # Box
+            half_extents = geom_size
+            offsets = np.array([
+                [-1, -1, -1],
+                [-1, -1,  1],
+                [-1,  1, -1],
+                [-1,  1,  1],
+                [ 1, -1, -1],
+                [ 1, -1,  1],
+                [ 1,  1, -1],
+                [ 1,  1,  1]
+            ]) * half_extents
+            object_points = offsets + object_position
+        elif geom_type == 5:  # Cylinder
+            radius = geom_size[0]
+            height = geom_size[1]
+            num_samples = 5000
+            angles = np.random.uniform(0, 2 * np.pi, num_samples)
+            heights = np.random.uniform(-height / 2, height / 2, num_samples)
+            x = radius * np.cos(angles)
+            y = radius * np.sin(angles)
+            z = heights
+            object_points = np.vstack((x, y, z)).T + object_position
+            object_points += np.random.normal(scale=1e-5, size=object_points.shape)
+        else:
+            raise ValueError("Unsupported geometry type. Extend this code to handle more shapes.")
 
-        # Sample points inside workspace convex hull
+        # Create the Delaunay triangulation for the object
+        try:
+            object_delaunay = Delaunay(object_points, qhull_options='QJ')
+        except scipy.spatial.qhull.QhullError as e:
+            print("Delaunay triangulation failed:", e)
+            object_delaunay = None
+
+
+        # Create the convex hull for the object
+        try:
+            object_hull = ConvexHull(object_points, qhull_options='QJ')
+            object_volume = object_hull.volume
+            print(f"Object Convex Hull Volume: {object_volume} cubic units")
+        except Exception as e:
+            print("ConvexHull calculation failed for the object:", e)
+            return
+
+        # Compute intersection
         workspace_delaunay = Delaunay(combined_points)
-        object_delaunay = Delaunay(box_corners)
+        object_delaunay = Delaunay(object_points)
 
-        # Generate a dense grid within workspace bounds
         min_bounds = np.min(combined_points, axis=0)
         max_bounds = np.max(combined_points, axis=0)
         grid_x, grid_y, grid_z = np.mgrid[
@@ -190,63 +217,40 @@ class OnlyPosIK:
             min_bounds[2]:max_bounds[2]:50j
         ]
         grid_points = np.vstack([grid_x.ravel(), grid_y.ravel(), grid_z.ravel()]).T
-        
-        # Find points inside both hulls (intersection points)
+
         inside_workspace = workspace_delaunay.find_simplex(grid_points) >= 0
         inside_object = object_delaunay.find_simplex(grid_points) >= 0
         intersection_points = grid_points[inside_workspace & inside_object]
 
-        # Compute intersection convex hull and its volume
-        if len(intersection_points) > 3:  # Minimum points to form a convex hull
+        if len(intersection_points) > 3:
             intersection_hull = ConvexHull(intersection_points)
             intersection_volume = intersection_hull.volume
         else:
             intersection_volume = 0
-        print(f"Intersection Volume: {intersection_volume} cubic units")
 
-        # Calculate remaining workspace volume
+        print(f"Intersection Volume: {intersection_volume} cubic units")
         remaining_workspace_volume = workspace_volume - intersection_volume
         print(f"Remaining Workspace Volume: {remaining_workspace_volume} cubic units")
 
-
-
-
-        # Visualization
+        # Visualization (unchanged, update for specific needs)
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax.scatter(workspacei_points[:, 0], workspacei_points[:, 1], workspacei_points[:, 2], c='b', marker='o', alpha=0.5, label="Index Finger")
         ax.scatter(workspacet_points[:, 0], workspacet_points[:, 1], workspacet_points[:, 2], c='r', marker='o', alpha=0.5, label="Thumb")
-        
         for simplex in hull.simplices:
             triangle = combined_points[simplex]
             poly = Poly3DCollection([triangle], alpha=0.5, edgecolor='k')
             poly.set_facecolor('cyan')
             ax.add_collection3d(poly)
-
-                # Plot object convex hull
-        ax.scatter(box_corners[:, 0], box_corners[:, 1], box_corners[:, 2], c='b', marker='^', label="Object Points")
-        for simplex in object_hull.simplices:
-            triangle = box_corners[simplex]
-            poly3d = [[tuple(triangle[0]), tuple(triangle[1]), tuple(triangle[2])]]
-            ax.add_collection3d(Poly3DCollection(poly3d, color='green', alpha=0.5))
-
-        # Plot intersection points
-        if len(intersection_points) > 0:
-            ax.scatter(intersection_points[:, 0], intersection_points[:, 1], intersection_points[:, 2], c='purple', label="Intersection Points")
-            
-
-        ax.set_title("Convex Hull of Finger Workspaces")
-        ax.set_xlabel("X")
-        ax.set_ylabel("Y")
-        ax.set_zlabel("Z")
+        ax.scatter(object_points[:, 0], object_points[:, 1], object_points[:, 2], c='g', label="Object Points")
+        ax.set_title("Convex Hull of Workspaces and Object")
         ax.legend()
         plt.show()
 
 
 
-
 if __name__ == "__main__":
-    xml_path = "sample_14.xml"
+    xml_path = "sample_3.xml"
     ik_solver = OnlyPosIK(xml_path)
 
     fixed_goals = [np.array([-0.055, -0.020, 0.12]), np.array([-0.055, -0.065, 0.12])]

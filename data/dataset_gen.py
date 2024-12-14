@@ -3,9 +3,9 @@ import ast
 import numpy as np
 
 # File paths
-shapes_csv_path = '../random_object_shapes_rounded.csv'
-volumes_xml_1_path = 'xml_1/remaining_workspace_volumes.csv'
-volumes_xml_2_path = 'xml_2/remaining_workspace_volumes_2.csv'
+shapes_csv_path = 'random_object_shapes_rounded.csv'
+volumes_xml_1_path = 'remaining_workspace_volumes.csv'
+volumes_xml_2_path = 'remaining_workspace_volumes_2.csv'
 
 # Read CSV files
 shapes_df = pd.read_csv(shapes_csv_path)
@@ -48,7 +48,7 @@ def calculate_volume(shape, dimensions):
         volume = np.pi * (r) ** 2 * (2 * h)  
     else:
         volume = 0
-    return round(volume, 3)
+    return round(volume, 10)
 
 processed_data = {
     "Object 1 Volume": [],

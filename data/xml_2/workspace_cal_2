@@ -284,8 +284,8 @@ if __name__ == "__main__":
     viewer = None  # Initialize viewer variable
 
     # Specify the range of XML files to process
-    start_index = 301
-    end_index = 400
+    start_index = 801
+    end_index = 999
 
     for i in range(start_index, end_index + 1):
         try:

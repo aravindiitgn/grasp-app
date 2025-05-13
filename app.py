@@ -3,99 +3,92 @@ import pandas as pd
 import numpy as np
 import joblib
 
-# Load the trained model
-model = joblib.load('final_workspace_volume_model.pkl')
+# ——— Load your model and scaler ——————————————————————————————
+@st.cache(allow_output_mutation=True)
+def load_model_and_scaler():
+    model = joblib.load('final_workspace_volume_model.pkl')
+    try:
+        scaler = joblib.load('scaler.pkl')
+    except FileNotFoundError:
+        scaler = None
+    return model, scaler
 
-# Load the scaler if available
-try:
-    scaler = joblib.load('scaler.pkl')
-except FileNotFoundError:
-    scaler = None
+model, scaler = load_model_and_scaler()
 
-st.title("Workspace Volume Predictor for Grasp Sequences (Input in mm)")
 
-# Helper functions
-def calculate_volume(shape, dims_m):
-    # dims_m are in meters
-    if shape == 'Cuboid':
-        x, y, z = dims_m
-        return 2*x * 2*y * 2*z
-    elif shape == 'Sphere':
-        r, = dims_m
-        return (4/3) * np.pi * r**3
-    elif shape == 'Cylinder':
-        r, h = dims_m
-        return np.pi * r**2 * 2*h
-    return 0
+# ——— Feature‐prep & prediction functions —————————————————————————
+def calculate_volume_cylinder(radius, half_length):
+    """Volume of a cylinder with radius r and total height 2*h."""
+    return np.pi * radius**2 * (2 * half_length)
 
-def calculate_grasp_length(shape, dims_m):
-    # for cuboid & cylinder, grasp along the "y" dimension
-    if shape in ['Cuboid', 'Cylinder']:
-        return 2 * dims_m[1]
-    return 0
+def calculate_grasp_length(half_length):
+    """Grasp length = 2 * half_length."""
+    return 2 * half_length
 
-def prepare_features(shapeA, dimsA_mm, shapeB, dimsB_mm):
-    # convert mm → m
-    dimsA = [d/1000 for d in dimsA_mm]
-    dimsB = [d/1000 for d in dimsB_mm]
-
-    volA = calculate_volume(shapeA, dimsA)
-    gripA = calculate_grasp_length(shapeA, dimsA)
-    volB = calculate_volume(shapeB, dimsB)
-    gripB = calculate_grasp_length(shapeB, dimsB)
-
-    one_hot = {'Cuboid': [1,0,0], 'Sphere': [0,1,0], 'Cylinder': [0,0,1]}
-    features = [
-        volA, gripA, *one_hot[shapeA],
-        volB, gripB, *one_hot[shapeB]
+def prepare_input_features(objA_dims, objB_dims):
+    # both are [radius, half_length]
+    vA = calculate_volume_cylinder(*objA_dims)
+    vB = calculate_volume_cylinder(*objB_dims)
+    gA = calculate_grasp_length(objA_dims[1])
+    gB = calculate_grasp_length(objB_dims[1])
+    # one-hot for cylinder = [0,0,1]
+    return [
+        vA, gA, 0,0,1,
+        vB, gB, 0,0,1
     ]
-    arr = np.array(features).reshape(1, -1)
-    return scaler.transform(arr) if scaler else arr
 
-# UI for object input
-def input_object(name):
-    st.subheader(name + " (all dims in mm)")
-    shape = st.selectbox(f"{name} Shape", ['Cuboid', 'Sphere', 'Cylinder'], key=name)
-    if shape == 'Cuboid':
-        x = st.number_input(f"{name} x half-length", min_value=1.0, max_value=1000.0, value=10.0, step=1.0, key=name+'x')
-        y = st.number_input(f"{name} y half-width",  min_value=1.0, max_value=1000.0, value=10.0, step=1.0, key=name+'y')
-        z = st.number_input(f"{name} z half-height", min_value=1.0, max_value=1000.0, value=10.0, step=1.0, key=name+'z')
-        dims_mm = [x, y, z]
-    elif shape == 'Sphere':
-        r = st.number_input(f"{name} radius", min_value=1.0, max_value=1000.0, value=10.0, step=1.0, key=name+'r')
-        dims_mm = [r]
-    else:  # Cylinder
-        r = st.number_input(f"{name} radius",     min_value=1.0, max_value=1000.0, value=10.0, step=1.0, key=name+'r')
-        h = st.number_input(f"{name} half-height", min_value=1.0, max_value=1000.0, value=10.0, step=1.0, key=name+'h')
-        dims_mm = [r, h]
-    return shape, dims_mm
+def predict_sequence(objA_dims, objB_dims):
+    # build features A→B and B→A
+    feats_ab = prepare_input_features(objA_dims, objB_dims)
+    feats_ba = prepare_input_features(objB_dims, objA_dims)
+    df_ab = pd.DataFrame([feats_ab])
+    df_ba = pd.DataFrame([feats_ba])
+    if scaler:
+        Xab = scaler.transform(df_ab)
+        Xba = scaler.transform(df_ba)
+    else:
+        Xab, Xba = df_ab, df_ba
 
-# Layout
-with st.form(key='input_form'):
-    col1, col2 = st.columns(2)
-    with col1:
-        shapeA, dimsA_mm = input_object("Object A")
-    with col2:
-        shapeB, dimsB_mm = input_object("Object B")
-    submitted = st.form_submit_button("Predict Workspace Volumes")
+    # model.predict returns [[vol_after1, vol_after2]]
+    va1, vab = model.predict(Xab)[0]
+    vb1, vba = model.predict(Xba)[0]
+    total_ab = va1 + vab
+    total_ba = vb1 + vba
+
+    return {
+        "A_then_B": {"after_1": va1, "after_2": vab, "total": total_ab},
+        "B_then_A": {"after_1": vb1, "after_2": vba, "total": total_ba},
+        "better": "A→B" if total_ab>total_ba else ("B→A" if total_ba>total_ab else "Tie")
+    }
+
+
+# ——— Streamlit UI ————————————————————————————————————————————————
+st.title("Grasp‐Sequence Workspace Volume Predictor")
+
+st.markdown("Enter **diameter** and **length** for two cylinders (in mm).  The app will convert to radius & half‐length in meters, run your model, and tell you which sequence (A→B or B→A) gives the larger workspace volume.")
+
+with st.form("input_form"):
+    st.subheader("Object A")
+    d1 = st.number_input("Diameter (mm)", min_value=0.0, value=20.0, step=0.1, key="d1")
+    L1 = st.number_input("Length (mm)",   min_value=0.0, value=100.0, step=0.1, key="L1")
+
+    st.subheader("Object B")
+    d2 = st.number_input("Diameter (mm)", min_value=0.0, value=30.0, step=0.1, key="d2")
+    L2 = st.number_input("Length (mm)",   min_value=0.0, value=120.0, step=0.1, key="L2")
+
+    submitted = st.form_submit_button("Predict")
 
 if submitted:
-    feat_ab = prepare_features(shapeA, dimsA_mm, shapeB, dimsB_mm)
-    feat_ba = prepare_features(shapeB, dimsB_mm, shapeA, dimsA_mm)
+    # convert mm → m, half‐length
+    objA = [(d1/2)/1000.0, (L1/2)/1000.0]
+    objB = [(d2/2)/1000.0, (L2/2)/1000.0]
 
-    pred_ab = model.predict(feat_ab)[0]
-    pred_ba = model.predict(feat_ba)[0]
+    res = predict_sequence(objA, objB)
 
-    total_ab = pred_ab[0] + pred_ab[1]
-    total_ba = pred_ba[0] + pred_ba[1]
-
-    st.write("## Results")
-    st.write(f"**A → B Total Workspace Volume:** {total_ab:.6f} m³")
-    st.write(f"**B → A Total Workspace Volume:** {total_ba:.6f} m³")
-
-    if total_ab < total_ba:
-        st.success("Optimal sequence: A first, then B")
-    elif total_ba < total_ab:
-        st.success("Optimal sequence: B first, then A")
+    st.markdown("### Results")
+    st.write(f"**Sequence A → B**  •  After 1st grasp: `{res['A_then_B']['after_1']:.10f}` m³  •  After both: `{res['A_then_B']['after_2']:.10f}` m³  •  **Total:** `{res['A_then_B']['total']:.10f}` m³")
+    st.write(f"**Sequence B → A**  •  After 1st grasp: `{res['B_then_A']['after_1']:.10f}` m³  •  After both: `{res['B_then_A']['after_2']:.10f}` m³  •  **Total:** `{res['B_then_A']['total']:.10f}` m³")
+    if res["better"] == "Tie":
+        st.success("Both sequences yield the same total volume.")
     else:
-        st.info("Both sequences yield equal total volumes")
+        st.success(f"▶️ **Better sequence:** {res['better']}")
